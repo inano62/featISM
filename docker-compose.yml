@@ -1,14 +1,41 @@
 services:
+  api:
+    build: ./api
+    image: node:20-alpine
+    container_name: featism-api
+    working_dir: /api
+    volumes:
+      - ./api:/api
+    env_file:
+      - ./api/.env
+    command: sh -lc "npm i && node server.js"
+    environment:
+      - PORT=4242
+      - CORS_ORIGIN=http://localhost:5173
+      - FIREBASE_EMULATOR_HOST=firebase:8080
+      - GOOGLE_CLOUD_PROJECT=demo-auth
+    ports:
+      - "4242:4242"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4242/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    depends_on:
+      - firebase
+
   frontend:
     image: node:20-alpine
     working_dir: /app
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    ports:
-      - "5173:5173"
+    ports: ["5173:5173"]
     command: sh -lc "npm i && npm run dev -- --host"
     depends_on:
+      api:
+        condition: service_healthy
       firebase:
         condition: service_started
     restart: unless-stopped
@@ -24,22 +51,10 @@ services:
       - "4000:4000"   # Emulator UI
       - "8080:8080"   # Firestore
       - "9099:9099"   # Auth
-    command: [ "sh","-lc",
-               "firebase emulators:start --only auth,firestore,ui --project demo-auth --import=.emulator-data --export-on-exit"
-    ]
+    command: >
+      sh -lc "firebase emulators:start
+      --only auth,firestore,ui
+      --project demo-auth
+      --import=.emulator-data
+      --export-on-exit"
     restart: unless-stopped
-  api:
-    image: node:20-alpine
-    working_dir: /api
-    volumes:
-      - ./api:/api
-    command: sh -lc "npm i && node server.js"
-    environment:
-      - STRIPE_SECRET_KEY=sk_test_xxx
-      - PRICE_ID=price_XXX
-      - SUCCESS_URL=http://localhost:5173/success?session_id={CHECKOUT_SESSION_ID}
-      - CANCEL_URL=http://localhost:5173/cancel
-    ports:
-      - "4242:4242"
-    depends_on:
-      - frontend
