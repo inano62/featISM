@@ -1,0 +1,25 @@
+services:
+  frontend:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    command: sh -lc "npm i && npm run dev -- --host"
+    depends_on:
+      firebase:
+        condition: service_started
+    restart: unless-stopped
+
+  firebase:
+    image: node:20-alpine
+    working_dir: /emu
+    volumes:
+      - ./frontend:/emu
+    ports: ["4000:4000","9099:9099","8080:8080"]
+    command: >
+      sh -lc "npm i -g firebase-tools &&
+              firebase emulators:start --only auth,firestore
+              --project demo-project --import=.emulator-data --export-on-exit"
