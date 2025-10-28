@@ -14,12 +14,32 @@ services:
     restart: unless-stopped
 
   firebase:
-    image: node:20-alpine
+    build:
+      context: ./docker/firebase
+    container_name: firebase-emus
     working_dir: /emu
     volumes:
       - ./frontend:/emu
-    ports: ["4000:4000","9099:9099","8080:8080"]
-    command: >
-      sh -lc "npm i -g firebase-tools &&
-              firebase emulators:start --only auth,firestore
-              --project demo-project --import=.emulator-data --export-on-exit"
+    ports:
+      - "4000:4000"   # Emulator UI
+      - "8080:8080"   # Firestore
+      - "9099:9099"   # Auth
+    command: [ "sh","-lc",
+               "firebase emulators:start --only auth,firestore,ui --project demo-auth --import=.emulator-data --export-on-exit"
+    ]
+    restart: unless-stopped
+  api:
+    image: node:20-alpine
+    working_dir: /api
+    volumes:
+      - ./api:/api
+    command: sh -lc "npm i && node server.js"
+    environment:
+      - STRIPE_SECRET_KEY=sk_test_xxx
+      - PRICE_ID=price_XXX
+      - SUCCESS_URL=http://localhost:5173/success?session_id={CHECKOUT_SESSION_ID}
+      - CANCEL_URL=http://localhost:5173/cancel
+    ports:
+      - "4242:4242"
+    depends_on:
+      - frontend
