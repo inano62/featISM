@@ -2,7 +2,7 @@
 import { auth } from '@/firebase'
 import { signOut } from 'firebase/auth'
 import { ref } from 'vue'
-import OrdersSection from '@/components/dashboard/OrdersSection.vue'
+import OrdersSection from '@/components/dashboard/OrderSection.vue'
 import ManualPurchasesSection from '@/components/dashboard/ManualPurchasesSection.vue'
 
 const user = ref(auth.currentUser)
